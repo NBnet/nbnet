@@ -23,7 +23,7 @@ bench-nbnet:
 	$(CARGO) run --release -p nbnet-node --bin bench-nbnet
 
 run:
-	$(CARGO) run --release -p nbnet-node --bin nbnet -- node
+	$(CARGO) run --release -p nbnet-node --bin nb -- node
 
 doc:
 	$(CARGO) doc --workspace --no-deps --open

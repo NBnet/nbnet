@@ -10,7 +10,7 @@ name = "nbnet_node"
 path = "src/lib.rs"
 
 [[bin]]
-name = "nbnet"
+name = "nb"
 path = "src/main.rs"
 
 [[bin]]

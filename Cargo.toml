@@ -51,13 +51,13 @@ tower-http = { version = "0.6", features = ["cors"] }
 parking_lot = "0.12"
 criterion = { version = "0.5", features = ["html_reports"] }
 
-# hotmint core crates (via path to sibling repo)
-hotmint = { version = "0.8.3", path = "../hotmint/crates/hotmint" }
-hotmint-types = { version = "0.8.3", path = "../hotmint/crates/hotmint-types" }
-hotmint-crypto = { version = "0.8.3", path = "../hotmint/crates/hotmint-crypto" }
-hotmint-consensus = { version = "0.8.3", path = "../hotmint/crates/hotmint-consensus" }
-hotmint-mempool = { version = "0.8.3", path = "../hotmint/crates/hotmint-mempool" }
-hotmint-mgmt = { path = "../hotmint/crates/hotmint-mgmt" }
+# hotmint core crates
+hotmint = "0.8.3"
+hotmint-types = "0.8.3"
+hotmint-crypto = "0.8.3"
+hotmint-consensus = "0.8.3"
+hotmint-mempool = "0.8.3"
+hotmint-mgmt = "0.8.3"
 
 # nbnet crates
 nbnet-types = { path = "crates/types" }

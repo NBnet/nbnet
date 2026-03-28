@@ -180,7 +180,7 @@ fn run_bench(label: &str, txs_to_submit: usize) {
     .unwrap();
 
     // Find or build the nbnet binary.
-    let binary = hotmint_mgmt::build_binary("nbnet-node", Some("nbnet"))
+    let binary = hotmint_mgmt::build_binary("nbnet-node", Some("nb"))
         .expect("failed to build nbnet binary");
 
     // Start nodes.

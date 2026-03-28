@@ -36,7 +36,7 @@ use nbnet_types::genesis::EvmGenesis;
 
 /// nbnet EVM Node — production-grade EVM-compatible chain.
 #[derive(Parser)]
-#[command(name = "nbnet", about = "nbnet EVM-compatible chain node")]
+#[command(name = "nb", about = "nbnet EVM-compatible chain node")]
 struct Cli {
     /// Path to nbnet home directory (contains config/, data/).
     #[arg(long, global = true)]
