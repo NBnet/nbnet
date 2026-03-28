@@ -1,6 +1,6 @@
-# hotmint-evm-txpool
+# nbnet-txpool
 
-Ethereum-compatible transaction pool for the Hotmint EVM chain.
+Ethereum-compatible transaction pool for the nbnet chain.
 
 Manages pending and queued transactions with (sender, nonce) ordering, EIP-1559 fee-based priority, and replacement-by-fee support.
 

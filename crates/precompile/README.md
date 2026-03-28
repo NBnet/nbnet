@@ -1,6 +1,6 @@
-# hotmint-evm-precompile
+# nbnet-precompile
 
-Custom EVM precompiled contracts for the Hotmint EVM chain.
+Custom EVM precompiled contracts for the nbnet chain.
 
 Bridges the EVM execution layer to the native Hotmint staking system via precompile calls at reserved addresses.
 

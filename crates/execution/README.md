@@ -1,6 +1,6 @@
-# hotmint-evm-execution
+# nbnet-execution
 
-EVM block executor for the Hotmint EVM chain, powered by [revm](https://crates.io/crates/revm).
+EVM block executor for the nbnet chain, powered by [revm](https://crates.io/crates/revm).
 
 Implements the `Application` trait from `hotmint-consensus`, bridging the Hotmint consensus engine with full EVM execution.
 

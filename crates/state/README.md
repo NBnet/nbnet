@@ -1,6 +1,6 @@
-# hotmint-evm-state
+# nbnet-state
 
-EVM world state backed by [vsdb](https://crates.io/crates/vsdb) for the Hotmint EVM chain.
+EVM world state backed by [vsdb](https://crates.io/crates/vsdb) for the nbnet chain.
 
 Manages account balances, nonces, contract code, and storage slots. Provides a `CacheDB` adapter for [revm](https://crates.io/crates/revm) execution and computes Merkle Patricia Trie state roots for block headers.
 

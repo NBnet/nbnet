@@ -1,6 +1,6 @@
-# hotmint-evm-rpc
+# nbnet-rpc
 
-Ethereum JSON-RPC server for the Hotmint EVM chain.
+Ethereum JSON-RPC server for the nbnet chain.
 
 Implements `eth_*`, `net_*`, `web3_*` methods compatible with MetaMask, Foundry, and Hardhat. Runs as a standalone [axum](https://crates.io/crates/axum) HTTP server.
 

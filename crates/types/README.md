@@ -1,6 +1,6 @@
-# hotmint-evm-types
+# nbnet-types
 
-Ethereum transaction types, genesis configuration, and chain config for the Hotmint EVM chain.
+Ethereum transaction types, genesis configuration, and chain config for the nbnet chain.
 
 ## Components
 
