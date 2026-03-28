@@ -1,0 +1,19 @@
+[package]
+name = "nbnet-txpool"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+nbnet-types = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-consensus = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+ruc = { workspace = true }
+
+[dev-dependencies]
+k256 = { workspace = true }
+rand = { workspace = true }
+alloy-eips = { workspace = true }
