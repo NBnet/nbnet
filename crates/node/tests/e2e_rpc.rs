@@ -55,8 +55,8 @@ fn setup_and_start(evm_genesis: &EvmGenesis) -> (Vec<Child>, u16, PathBuf) {
     )
     .unwrap();
 
-    let binary = hotmint_mgmt::build_binary("nbnet-node", Some("nb"))
-        .expect("failed to build nbnet");
+    let binary =
+        hotmint_mgmt::build_binary("nbnet-node", Some("nb")).expect("failed to build nbnet");
 
     let children = start_evm_nodes(&binary, &state, &base_dir, &eth_rpc_ports);
     (children, eth_rpc_ports[0], base_dir)

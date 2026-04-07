@@ -76,9 +76,9 @@ make bench-nbnet  # run throughput benchmark
 ## Dependencies
 
 - [hotmint](https://crates.io/crates/hotmint) — HotStuff-2 BFT consensus engine
-- [revm](https://crates.io/crates/revm) — EVM execution
 - [vsdb](https://crates.io/crates/vsdb) — pure-Rust versioned key-value storage
 - [alloy](https://github.com/alloy-rs/alloy) — Ethereum primitives and transaction types
+- [revm](https://crates.io/crates/revm) — EVM execution
 
 ## License
 

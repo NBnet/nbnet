@@ -180,8 +180,8 @@ fn run_bench(label: &str, txs_to_submit: usize) {
     .unwrap();
 
     // Find or build the nbnet binary.
-    let binary = hotmint_mgmt::build_binary("nbnet-node", Some("nb"))
-        .expect("failed to build nbnet binary");
+    let binary =
+        hotmint_mgmt::build_binary("nbnet-node", Some("nb")).expect("failed to build nbnet binary");
 
     // Start nodes.
     let mut children = start_evm_nodes(&binary, &state, &base_dir, &eth_rpc_ports);

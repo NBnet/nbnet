@@ -4,6 +4,10 @@ use ruc::*;
 use tracing::{info, warn};
 
 use hotmint_consensus::application::{Application, TxValidationResult};
+use hotmint_types::Block;
+use hotmint_types::block::BlockHash;
+use hotmint_types::context::{BlockContext, TxContext};
+use hotmint_types::validator_update::EndBlockResponse;
 use nbnet_precompile::{HotmintPrecompiles, SharedStakingState, StakingState};
 use nbnet_state::EvmState;
 use nbnet_txpool::{EvmTxPool, EvmTxPoolConfig};
@@ -11,10 +15,6 @@ use nbnet_types::EvmChainConfig;
 use nbnet_types::genesis::EvmGenesis;
 use nbnet_types::receipt::{EvmLog, EvmReceipt};
 use nbnet_types::tx;
-use hotmint_types::Block;
-use hotmint_types::block::BlockHash;
-use hotmint_types::context::{BlockContext, TxContext};
-use hotmint_types::validator_update::EndBlockResponse;
 
 use alloy_consensus::Transaction;
 use alloy_primitives::{Address, B256, Bytes, U256};

@@ -8,8 +8,8 @@
 use std::path::Path;
 use std::process::{Child, Command};
 
-use nbnet_types::genesis::EvmGenesis;
 use hotmint_mgmt::cluster::{self, ClusterState};
+use nbnet_types::genesis::EvmGenesis;
 
 /// Initialize an EVM cluster: framework init + evm-genesis.json + eth RPC ports.
 ///

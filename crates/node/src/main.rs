@@ -298,8 +298,8 @@ async fn run_node(
 
     // Mempool gossip: receive txs from peers.
     {
-        use nbnet_execution::EvmMempoolAdapter;
         use hotmint_mempool::MempoolAdapter;
+        use nbnet_execution::EvmMempoolAdapter;
 
         let gossip_mempool = Arc::new(EvmMempoolAdapter {
             txpool: Arc::clone(&shared_executor.txpool),
