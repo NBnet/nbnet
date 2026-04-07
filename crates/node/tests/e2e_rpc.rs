@@ -19,7 +19,12 @@ use nbnet_types::genesis::{EvmGenesis, GenesisAlloc};
 const NUM_VALIDATORS: u32 = 4;
 
 fn rpc_url(port: u16) -> String {
-    format!("http://127.0.0.1:{port}/")
+    let host = hotmint_mgmt::loopback_addr();
+    if host.contains(':') {
+        format!("http://[{host}]:{port}/")
+    } else {
+        format!("http://{host}:{port}/")
+    }
 }
 
 async fn rpc_call(port: u16, method: &str, params: serde_json::Value) -> serde_json::Value {
@@ -46,12 +51,13 @@ fn setup_and_start(evm_genesis: &EvmGenesis) -> (Vec<Child>, u16, PathBuf) {
     let base_dir = std::env::temp_dir().join(format!("nbnet-e2e-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base_dir);
 
+    let bind_ip = hotmint_mgmt::loopback_addr();
     let (state, eth_rpc_ports) = init_evm_cluster(
         &base_dir,
         NUM_VALIDATORS,
         "evm-e2e-test",
         evm_genesis,
-        "127.0.0.1",
+        bind_ip,
     )
     .unwrap();
 

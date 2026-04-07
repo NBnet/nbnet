@@ -51,7 +51,7 @@ pub fn init_evm_cluster(
 
 /// Start EVM node processes with staggered startup.
 ///
-/// Each node gets `--rpc-addr 127.0.0.1:{eth_rpc_ports[i]}` for Ethereum JSON-RPC.
+/// Each node gets `--rpc-addr {bind_ip}:{eth_rpc_ports[i]}` for Ethereum JSON-RPC.
 pub fn start_evm_nodes(
     binary: &Path,
     state: &ClusterState,
@@ -61,17 +61,19 @@ pub fn start_evm_nodes(
     // Clean up orphaned nodes from previous runs.
     hotmint_mgmt::kill_stale_nodes(base_dir);
 
+    let bind_ip = hotmint_mgmt::loopback_addr();
     let mut children = Vec::new();
     for (i, v) in state.validators.iter().enumerate() {
         let log = std::fs::File::create(base_dir.join(format!("v{}.log", v.id)))
             .expect("create log file");
         let log_err = log.try_clone().expect("clone log file");
+        let rpc_addr = hotmint_mgmt::format_host_port(bind_ip, eth_rpc_ports[i]);
         let child = Command::new(binary)
             .arg("--home")
             .arg(&v.home_dir)
             .arg("node")
             .arg("--rpc-addr")
-            .arg(format!("127.0.0.1:{}", eth_rpc_ports[i]))
+            .arg(&rpc_addr)
             .stdout(log)
             .stderr(log_err)
             .spawn()
