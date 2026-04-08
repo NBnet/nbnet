@@ -68,12 +68,29 @@ fn setup_and_start(evm_genesis: &EvmGenesis) -> (Vec<Child>, u16, PathBuf) {
     (children, eth_rpc_ports[0], base_dir)
 }
 
+/// Try an RPC call, returning None on connection/transport errors instead of panicking.
+async fn try_rpc_call(
+    port: u16,
+    method: &str,
+    params: serde_json::Value,
+) -> Option<serde_json::Value> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": params,
+        "id": 1
+    });
+    let resp = client.post(rpc_url(port)).json(&body).send().await.ok()?;
+    resp.json().await.ok()
+}
+
 /// Wait until eth_blockNumber returns >= min_height.
 async fn wait_for_blocks(port: u16, min_height: u64, timeout_secs: u64) -> bool {
     let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(timeout_secs);
     while tokio::time::Instant::now() < deadline {
-        let resp = rpc_call(port, "eth_blockNumber", serde_json::json!([])).await;
-        if let Some(hex) = resp["result"].as_str()
+        if let Some(resp) = try_rpc_call(port, "eth_blockNumber", serde_json::json!([])).await
+            && let Some(hex) = resp["result"].as_str()
             && let Ok(h) = u64::from_str_radix(hex.strip_prefix("0x").unwrap_or(hex), 16)
             && h >= min_height
         {
