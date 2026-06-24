@@ -437,6 +437,8 @@ async fn run_node(
                     last_app_hash: &mut engine_state_app_hash,
                     chain_id_hash: &state.chain_id_hash,
                     pending_epoch: &mut engine_state_pending_epoch,
+                    persistence: None,
+                    wal: None,
                 };
                 match sync_to_tip(&mut sync_state, &sync_tx, &mut sync_resp_rx).await {
                     Ok(()) => {

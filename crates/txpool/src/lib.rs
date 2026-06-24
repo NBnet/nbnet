@@ -200,7 +200,7 @@ impl EvmTxPool {
             }
         }
         // Sort by tip descending.
-        candidates.sort_by(|a, b| b.2.cmp(&a.2));
+        candidates.sort_by_key(|b| std::cmp::Reverse(b.2));
 
         let mut included: Vec<(Address, u64)> = Vec::new();
         for (sender, nonce, _tip, raw) in &candidates {
