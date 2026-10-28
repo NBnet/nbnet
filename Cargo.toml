@@ -35,7 +35,7 @@ alloy-rlp = "0.3"
 alloy-consensus = { version = "1.7", default-features = false, features = ["std", "k256"] }
 alloy-eips = { version = "1.7", default-features = false, features = ["std", "k256"] }
 alloy-signer = { version = "1.7" }
-alloy-signer-local = { version = "1.7" }
+alloy-signer-local = { version = "2.5" }
 alloy-network = { version = "1.7" }
 k256 = { version = "0.13", features = ["ecdsa"] }
 litep2p = "0.14.3"
