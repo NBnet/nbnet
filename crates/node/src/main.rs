@@ -185,7 +185,7 @@ async fn run_node(
 
     // Storage.
     std::fs::create_dir_all(&data_dir).c(d!("create data dir"))?;
-    vsdb::vsdb_set_base_dir(&data_dir).c(d!("set vsdb base dir"))?;
+    vsdb::vsdb_configure(vsdb::VsdbOptions::new(&data_dir)).c(d!("configure vsdb"))?;
 
     let store: Arc<parking_lot::RwLock<Box<dyn BlockStore>>> =
         Arc::new(parking_lot::RwLock::new(Box::new(VsdbBlockStore::new())));
@@ -210,6 +210,7 @@ async fn run_node(
     let mut engine_state_height = state.last_committed_height;
     let mut engine_state_app_hash = state.last_app_hash;
     let mut engine_state_pending_epoch = None;
+    let mut engine_state_previous_epoch = None;
     if let Some(epoch) = pcs.load_current_epoch() {
         state.validator_set = epoch.validator_set.clone();
         state.current_epoch = epoch.clone();
@@ -266,11 +267,7 @@ async fn run_node(
                 pex
             },
             relay_consensus: node_config.node.relay_consensus,
-            initial_validators: validator_set
-                .validators()
-                .iter()
-                .map(|v| (v.id, v.public_key.clone()))
-                .collect(),
+            initial_validator_set: validator_set,
             chain_id_hash: state.chain_id_hash,
         })?
     };
@@ -437,6 +434,7 @@ async fn run_node(
                     last_app_hash: &mut engine_state_app_hash,
                     chain_id_hash: &state.chain_id_hash,
                     pending_epoch: &mut engine_state_pending_epoch,
+                    previous_epoch: &mut engine_state_previous_epoch,
                     persistence: None,
                     wal: None,
                 };
@@ -521,6 +519,7 @@ async fn run_node(
                     .expect("failed to open consensus WAL"),
             )),
             pending_epoch: engine_state_pending_epoch,
+            previous_epoch: engine_state_previous_epoch,
         },
     );
 
