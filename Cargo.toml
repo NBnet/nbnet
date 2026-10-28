@@ -47,7 +47,7 @@ toml = "0.8"
 dirs = "6"
 hex = "0.4"
 axum = { version = "0.8", features = ["ws"] }
-tower-http = { version = "0.6", features = ["cors"] }
+tower-http = { version = "0.7", features = ["cors"] }
 parking_lot = "0.13"
 criterion = { version = "0.5", features = ["html_reports"] }
 
