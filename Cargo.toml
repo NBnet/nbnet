@@ -37,7 +37,7 @@ alloy-eips = { version = "1.7", default-features = false, features = ["std", "k2
 alloy-signer = { version = "1.7" }
 alloy-signer-local = { version = "1.7" }
 alloy-network = { version = "1.7" }
-k256 = { version = "0.13", features = ["ecdsa"] }
+k256 = { version = "0.14", features = ["ecdsa"] }
 litep2p = "0.14.3"
 async-trait = "0.1"
 futures = "0.3"
