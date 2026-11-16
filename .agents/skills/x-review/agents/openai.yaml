@@ -1,0 +1,6 @@
+interface:
+  display_name: "nbnet Deep Regression Review"
+  short_description: "Review nbnet EVM execution and maintain the audit registry"
+
+policy:
+  allow_implicit_invocation: false
