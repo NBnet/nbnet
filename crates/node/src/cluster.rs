@@ -3,7 +3,7 @@
 //! Wraps the generic `hotmint_mgmt` framework with EVM-specific logic:
 //! - Allocates extra ports for Ethereum JSON-RPC
 //! - Writes `evm-genesis.json` to each node's config directory
-//! - Starts `nbnet` processes with `--rpc-addr`
+//! - Starts `nb` processes with `--home <dir> node --rpc-addr`
 
 use std::path::Path;
 use std::process::{Child, Command};

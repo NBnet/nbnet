@@ -3,9 +3,9 @@
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-2024_edition-orange.svg)](https://www.rust-lang.org/)
 
-**An EVM-compatible blockchain built on [Hotmint](https://github.com/rust-util-collections/hotmint) consensus.**
+**EVM block execution on [Hotmint](https://github.com/NBnet/hotmint) consensus.**
 
-nbnet pairs the [revm](https://github.com/bluealloy/revm) execution engine with Hotmint's HotStuff-2 BFT consensus to deliver a fully Ethereum-compatible chain — with no C/C++ dependencies in the critical path.
+nbnet runs [revm](https://github.com/bluealloy/revm) as a Hotmint `Application` and serves a subset of Ethereum JSON-RPC. It is not a full Ethereum client. The consensus state machine, P2P, and WAL stay in Hotmint. See [docs/architecture.md](docs/architecture.md) for what the RPC and precompiles actually do.
 
 ---
 
@@ -45,7 +45,7 @@ nbnet pairs the [revm](https://github.com/bluealloy/revm) execution engine with 
 | `nbnet-types` | EVM type definitions: `EvmChainConfig`, transactions, receipts |
 | `nbnet-state` | vsdb-backed EVM world state (`revm::Database` impl) |
 | `nbnet-txpool` | Ethereum mempool with `(sender, nonce)` semantics and RBF |
-| `nbnet-precompile` | Custom precompiles bridging EVM to Hotmint staking/balances |
+| `nbnet-precompile` | `0x0800` balances and `0x0801` staking lock. The delegation map is in-process, not `hotmint-staking` |
 | `nbnet-execution` | `EvmExecutor` implementing the Hotmint `Application` trait |
 | `nbnet-rpc` | Ethereum JSON-RPC server (axum-based) |
 | `nbnet-node` | Node binary `nb` and benchmark binary `bench-nbnet` |
@@ -63,7 +63,7 @@ nb node --home ~/.nbnet
 nb node --home ~/.nbnet --rpc-addr 0.0.0.0:8545
 ```
 
-The JSON-RPC endpoint is compatible with MetaMask, Foundry, Hardhat, and Web3.js.
+The RPC server speaks the methods listed in [docs/architecture.md](docs/architecture.md). Basic MetaMask and Foundry calls work against that subset. Block-by-hash, fee history, sync status, and receipt persistence do not match a full Ethereum node.
 
 ## Building
 

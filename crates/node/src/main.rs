@@ -5,8 +5,8 @@
 //! additional `config/evm-genesis.json` for EVM-specific settings.
 //!
 //! Usage:
-//!   nbnet init --home /path/to/home
-//!   nbnet node --home /path/to/home [--rpc-addr 127.0.0.1:8545]
+//!   nb init --home /path/to/home
+//!   nb node --home /path/to/home [--rpc-addr 127.0.0.1:8545]
 
 use ruc::*;
 

@@ -1,33 +1,15 @@
 # nbnet-rpc
 
-Ethereum JSON-RPC server for the nbnet chain.
+Ethereum JSON-RPC subset for nbnet, served by [axum](https://crates.io/crates/axum) on `POST /`.
 
-Implements `eth_*`, `net_*`, `web3_*` methods compatible with MetaMask, Foundry, and Hardhat. Runs as a standalone [axum](https://crates.io/crates/axum) HTTP server.
+The method table, including stubs, is [docs/architecture.md](../../docs/architecture.md#json-rpc). In short:
 
-## Supported Methods
-
-| Method | Description |
-|:-------|:------------|
-| `eth_chainId` | Chain ID |
-| `eth_blockNumber` | Latest block height |
-| `eth_getBalance` | Account balance |
-| `eth_getTransactionCount` | Account nonce |
-| `eth_getCode` | Contract bytecode |
-| `eth_getStorageAt` | Storage slot value |
-| `eth_gasPrice` | Base fee |
-| `eth_estimateGas` | Gas estimate (21k for transfers) |
-| `eth_maxPriorityFeePerGas` | Priority fee suggestion |
-| `eth_sendRawTransaction` | Submit signed tx + gossip to peers |
-| `eth_getBlockByNumber` | Block stub |
-| `eth_feeHistory` | Fee history |
-| `eth_syncing` | Sync status |
-| `eth_accounts` | Empty (no managed keys) |
-| `net_version` | Chain ID as string |
-| `web3_clientVersion` | Client version |
-
-## Transaction Gossip
-
-When `eth_sendRawTransaction` succeeds, the transaction is broadcast to all connected peers via `NetworkSink::broadcast_tx()`. This ensures transactions submitted to any node reach the entire network.
+- State queries (`eth_getBalance`, nonce, code, storage) read the live executor.
+- `eth_call` is a dry-run and does not commit.
+- `eth_estimateGas` dry-runs, then returns `21000` or `100000`. It does not return the gas the dry-run used.
+- `eth_sendRawTransaction` submits to the pool and gossips when a `NetworkSink` is attached.
+- Receipts and logs come from the in-memory receipt list. They do not survive a restart.
+- `eth_getBlockByHash` is always `null`. `eth_getBlockByNumber`, `eth_feeHistory`, and `eth_syncing` are stubs.
 
 ## License
 

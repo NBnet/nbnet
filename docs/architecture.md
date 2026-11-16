@@ -1,117 +1,80 @@
-# nbnet Architecture
+# nbnet architecture
 
-> Extracted from the [Hotmint](https://github.com/NBnet/hotmint) security audit & roadmap.
-> Covers the EVM-specific design decisions, component mapping, and production gap analysis.
+nbnet executes EVM blocks on [Hotmint](https://github.com/NBnet/hotmint) and serves a subset of Ethereum JSON-RPC. Consensus, networking, the WAL, and the evidence store are Hotmint's. This repository is the application: transaction checks, revm, world state, the nonce pool, two precompiles, RPC, and the `nb` binary.
 
----
+It is not a full Ethereum client, and it does not embed Substrate pallets or `hotmint-staking`.
 
-## 1. Technology Stack Evaluation: Substrate (Frontier/SputnikVM) vs Reth (revm/alloy)
+## Crates
 
-| Evaluation Dimension | Substrate Ecosystem (Frontier/SputnikVM) | Reth Ecosystem (revm/alloy) | Conclusion |
-|----------------------|-------------------------------------|----------------------|------|
-| Design Era | 2019–2020, bound to `no_std` + Wasm constraints | 2022–present, native `std` environment, modern API | 🏆 Reth |
-| Execution Performance | Moderate (memory allocation bottleneck) | Industry benchmark (Paradigm/OP Stack/Arbitrum have all migrated to revm) | 🏆 Reth |
-| Underlying Types | `sp-core` / `primitive-types` + SCALE encoding | `alloy-primitives` (high-performance U256/Address) + `alloy-rlp` | 🏆 Reth |
-| Substrate Component Compatibility | Very high (Precompile natively interoperates with pallet-balances, etc.) | Low (requires custom bridging) | 🏆 Substrate |
-| AI Porting Difficulty | High (must strip `#[pallet]` macros + Wasm boundary) | Very low (pure Rust library, implement `Database` trait with ~4 methods to integrate with vsdb) | 🏆 Reth |
+| Crate | Role |
+|-------|------|
+| `nbnet-types` | Chain config, genesis, EIP-1559/legacy decode and sender recovery, receipts |
+| `nbnet-state` | `EvmState`: revm `CacheDB` over vsdb `MapxOrdRawKey`, plus an MPT (`MptCalc`) whose root is `app_hash` |
+| `nbnet-txpool` | Pending vs queued pool keyed by `(sender, nonce)`, with RBF and per-sender caps |
+| `nbnet-execution` | `EvmExecutor` / `SharedExecutor` implement Hotmint `Application` |
+| `nbnet-precompile` | `0x0800` balances, `0x0801` staking lock |
+| `nbnet-rpc` | axum JSON-RPC |
+| `nbnet-node` | `nb` binary, local cluster helper, benchmark |
 
-**Conclusion: Hybrid Approach** — EVM execution layer embraces the Reth ecosystem (revm + alloy), while the native economic system and governance model retain AI-ported Substrate Pallets. The two are bridged through Custom Precompiles.
+## Block path
 
----
+1. `validate_tx` decodes the raw bytes, recovers the sender, and rejects a wrong chain id, a nonce below the account, insufficient balance, or a gas limit the block cannot hold. The priority is the effective tip.
+2. The pool keeps nonces that are contiguous from the account nonce in `pending`. A gap goes to `queued` until the predecessor arrives. The same `(sender, nonce)` is replaced only by a higher tip.
+3. `create_payload` packs pending transactions up to 4 MiB and the block gas limit.
+4. `execute_block` runs those transactions in order through revm (`SpecId::CANCUN`) and `transact_commit`. A transaction that does not decode, or whose nonce is not the account nonce at that step, is skipped and writes nothing. A transaction that would exceed the remaining block gas is not started. A revert or halt does not keep that call's storage writes.
+5. After the block, `flush_cache_to_vsdb` copies the cache into vsdb and the trie, then `state_root` becomes `EndBlockResponse.app_hash`.
+6. `on_commit` stores the height and drops pool entries below the new account nonce.
 
-## 2. Architecture Component Mapping
+Genesis allocation is a `BTreeMap`. Account leaves are big-endian `nonce(8) || balance(32) || code_hash(32)`. A `HashMap` walk must not be hashed into `app_hash`.
 
-| Substrate / Frontier Component | nbnet Target Architecture | Core Responsibility |
-|:---|:---|:---|
-| `pallet-timestamp` | `nbnet::Timestamp` | Provides current block time for the EVM `block.timestamp` opcode |
-| `pallet-balances` | `nbnet::Balances` | Manages native token, handles Gas deduction and native transfers (AI-ported from Substrate) |
-| `pallet-evm` (SputnikVM) | ~~Not used~~ → `revm` crate | Direct revm integration, implement `revm::Database` trait for vsdb |
-| `pallet-ethereum` | `alloy-rlp` + `alloy-primitives` | Ethereum RLP transaction decoding (EIP-1559/EIP-2930), `ecrecover` signature recovery |
-| `fc-rpc` (Frontier RPC) | `nbnet-rpc` (axum) | Standard `eth_*` JSON-RPC interface, MetaMask-compatible |
-| Substrate Storage Trie | `vsdb::MapxOrd` & `Mapx` | Account Nonce/Balance, EVM Code (contract bytecode), EVM Storage (contract state) |
-| `pallet-staking` | `nbnet::Staking` (AI-ported) | DPoS staking/validator election/slashing (native layer, exposed to EVM via Precompile) |
+`BLOCKHASH` currently records `B256::ZERO` for the parent. That placeholder is not part of the account leaf.
 
----
+## Precompiles
 
-## 3. Implementation Roadmap (5 Phases)
+| Address | Selectors | State |
+|---------|-----------|--------|
+| `0x0800` balances | `balanceOf(address)` `0x70a08231`, `transfer(address,uint256)` `0xa9059cbb` | Account balances in the revm journal, so they are in the trie |
+| `0x0801` staking | `delegate(address,uint256)` `0x026e402b`, `unbond(address,uint256)` `0xa5d059ca`, `getStake(address,address)` `0x82dda22d`, `totalStake(address)` `0xb273fc9a` | The token lock is a journal transfer to `0x0801` (in the trie). The delegation map is a process-local `HashMap` and is not part of `app_hash`. It is empty after a restart |
 
-**Phase 1: Underlying Native Economic System (AI-Ported from Substrate)** ✅
-- ~~Use AI to port `pallet-balances` to vsdb~~ → `nbnet-state` (`EvmState`): vsdb-backed account balance, nonce, code, storage
-- ~~Introduce `U256` safe arithmetic~~ → via `alloy-primitives::U256`
-- ~~Build EVM world state structure~~ → `EvmState` with vsdb `CacheDB` adapter for revm
-- ~~Implement `Timestamp` and `BlockContext`~~ → `BlockContext` carries height, gas_limit, coinbase, timestamp
+There is no `register` selector and no call into `hotmint-staking`.
 
-**Phase 2: Introduce Reth Core Primitives (Alloy)** ✅
-- ~~Introduce `alloy-primitives`, `alloy-rlp`~~ → `nbnet-types` crate
-- ~~`validate_tx`: RLP decode → ecrecover → ChainID → Nonce → Balance~~ → `tx::decode_and_recover()` + `tx::validate_tx()`
-- ~~Cryptography~~ → `k256` crate for secp256k1 ECDSA recovery
+## JSON-RPC
 
-**Phase 3: Integrate the Leading Execution Engine (Revm)** ✅
-- ~~Implement `revm::Database` trait for vsdb~~ → `EvmState` provides `CacheDB` for revm
-- ~~`execute_block`: revm → batch-write~~ → `EvmExecutor::execute_block()` in `nbnet-execution`
-- ~~Gas settlement~~ → max fee deducted pre-execution, refund after, proposer reward
-- ~~Events and logs~~ → `EvmReceipt` with logs persisted per block
-- ~~app_hash determinism~~ → `BTreeMap` + vsdb `MapxOrd` for state root
+Implemented on `POST /`. Enough for basic wallets and Foundry against this chain. Not a complete Ethereum API.
 
-**Phase 4: Cross-Layer Bridging (Precompile Interoperability)** ✅
-- ~~Implement `revm::Precompile` interface~~ → `nbnet-precompile` crate
-- ~~Address `0x0800` → Staking module~~ → `SharedStakingState` bridging EVM to `hotmint-staking`
+| Method | Behavior |
+|--------|----------|
+| `eth_chainId`, `net_version`, `web3_clientVersion` | Chain id from genesis. The client version string is the hardcoded `nbnet/0.1.0` |
+| `eth_blockNumber` | Committed height |
+| `eth_getBalance`, `eth_getTransactionCount`, `eth_getCode`, `eth_getStorageAt` | Current executor state |
+| `eth_gasPrice` | Configured base fee |
+| `eth_maxPriorityFeePerGas` | Constant `1_000_000_000` |
+| `eth_call` | Dry-run. Does not commit |
+| `eth_estimateGas` | Dry-run, then returns `21000` when `to` is set and `100000` otherwise. Not the gas the dry-run used |
+| `eth_sendRawTransaction` | Pool submit, then gossip when a network sink is attached |
+| `eth_getTransactionReceipt`, `eth_getLogs` | In-memory receipts for this process. Empty after a restart |
+| `eth_getTransactionByHash` | Rebuilt from the receipt. `value` is `0x0` and `gas` is gas used |
+| `eth_getBlockByNumber` | Stub for the latest height: zero hash and parent, zero timestamp, null transaction entries, receipt count as the transaction count |
+| `eth_getBlockByHash` | Always `null` |
+| `eth_feeHistory` | Constant stub from the configured base fee |
+| `eth_syncing` | Always `false` |
+| `eth_accounts` | Always `[]` |
 
-**Phase 5: Expose Web3 API (Alloy/Reth RPC)** ✅
-- ~~Build HTTP server~~ → `nbnet-rpc` (axum-based)
-- ~~Standard Ethereum APIs~~ → `eth_chainId`, `eth_blockNumber`, `eth_getBalance`, `eth_getTransactionCount`, `eth_getCode`, `eth_getStorageAt`, `eth_gasPrice`, `eth_estimateGas`, `eth_sendRawTransaction`, `eth_getBlockByNumber`, `eth_feeHistory`, `eth_syncing`, `net_version`, `web3_clientVersion`
-- ~~Compatible with MetaMask, Hardhat, Foundry~~ → basic compatibility achieved
+Anything else returns JSON-RPC `-32601`.
 
----
+## Node
 
-## 4. Key Risks and Pitfalls
+The binary is `nb`. `--home` is global and defaults to `~/.nbnet`.
 
-1. **State Reversion Consistency:** When an EVM transaction reverts or runs out of Gas, state changes must be rolled back while preserving Gas deduction. Approach: create a transient snapshot via vsdb Write Batch before each transaction; discard on failure, commit on success.
-2. **Mempool RBF and Ethereum Nonce Conflicts:** Ethereum nonces are strictly incrementing; `validate_tx` must verify `nonce >= account_nonce`, and the mempool needs `(sender, nonce)` deduplication and RBF replacement logic.
-3. **App Hash Determinism:** `HashMap` traversal is unordered, which causes `app_hash` inconsistency between nodes, leading to chain fork and halt. Strictly use `BTreeMap` / `vsdb::MapxOrd` with ordered traversal.
+```bash
+nb init --home ~/.nbnet
+nb node --home ~/.nbnet --rpc-addr 127.0.0.1:8545
+```
 
----
+`init` writes the Hotmint home (`config.toml`, `genesis.json`, keys) and `config/evm-genesis.json`. `node` loads both. Default RPC listen address is `127.0.0.1:8545`.
 
-## 5. Production Gap Analysis (v0.8 baseline)
+`crates/node/src/cluster.rs` can init several homes and start `nb --home <dir> node --rpc-addr <ip:port>` for tests and the benchmark.
 
-> All identified production gaps have been resolved. nbnet has feature parity with the standard hotmint-node for consensus infrastructure, and implements all essential Ethereum JSON-RPC methods.
+## What this document used to claim
 
-### 5.1 Completed Features
-
-| Feature | Implementation | Crate |
-|:--------|:--------------|:------|
-| EVM execution via revm | `EvmExecutor` implements `Application` trait | `nbnet-execution` |
-| EIP-1559 transaction pool | `EvmTxPool` with sender/nonce ordering, RBF, tip priority | `nbnet-txpool` |
-| Pluggable mempool | `MempoolAdapter` trait, `EvmMempoolAdapter` wraps `EvmTxPool` | `hotmint-mempool`, `nbnet-execution` |
-| Transaction gossip | `NetworkSink::broadcast_tx()` on RPC submit + gossip receive loop | `hotmint-consensus`, `nbnet-rpc`, `nbnet-node` |
-| Nonce-fn wiring | `EvmExecutor::setup_nonce_fn()` connects txpool to committed state | `nbnet-execution` |
-| Ethereum JSON-RPC | 22 methods (eth_*, net_*, web3_*) via axum | `nbnet-rpc` |
-| Staking precompile | `0x0800` → `hotmint-staking` via `SharedStakingState` | `nbnet-precompile` |
-| Cluster management | `init_evm_cluster()`, `start_evm_nodes()`, `kill_stale_nodes()` | `nbnet-node`, `hotmint-mgmt` |
-| TPS benchmark | Nonce-confirmed on-chain throughput measurement | `nbnet-node` (`bench-nbnet`) |
-| State persistence | vsdb-backed EVM state with MPT state root | `nbnet-state` |
-
-### 5.2 Node Infrastructure — All Resolved
-
-| # | Gap | Resolution |
-|---|:----|:-----------|
-| E-1 | Fullnode mode | Nodes not in genesis auto-detect as fullnode (`ValidatorId(u64::MAX)` sentinel) |
-| E-2 | Block sync on startup | `sync_to_tip()` runs from peers before consensus starts |
-| E-3 | Sync responder | Returns real height/view/epoch via `ConsensusStatus` watch channel |
-| E-4 | `init` subcommand | `nb init --home ...` generates keys + config + evm-genesis.json |
-| E-5 | Graceful shutdown | `tokio::select!` supervisor with ctrl_c + SIGTERM handlers |
-| E-6 | WAL | `ConsensusWal::open()` for crash-safe commit recovery |
-| E-7 | Evidence store | `PersistentEvidenceStore::open()` for equivocation proof persistence |
-| E-8 | CLI overrides | `--rpc-addr`, `--p2p-laddr` override config.toml values |
-| E-9 | Config respect | `serve_rpc`, `serve_sync` flags control server startup |
-
-### 5.3 Ethereum JSON-RPC — All Resolved
-
-| # | Method | Implementation |
-|---|:-------|:---------------|
-| R-1 | `eth_call` | Dry-run EVM execution via `EvmExecutor::eth_call()` (read-only `transact_one`) |
-| R-2 | `eth_getTransactionReceipt` | Full receipt: status, gasUsed, logs, effectiveGasPrice, contractAddress |
-| R-3 | `eth_getTransactionByHash` | Tx lookup from receipt data (hash, from, to, blockNumber) |
-| R-4 | `eth_getLogs` | Filter logs by address and topic across all blocks |
-| R-5 | `eth_getBlockByNumber` | Block with real height and transaction count |
-| R-6 | `eth_estimateGas` | Dry-run execution via `eth_call` for gas estimation |
+Earlier notes described a Substrate pallet port, a staking precompile at `0x0800` backed by `hotmint-staking`, a per-transaction vsdb write batch, and feature parity with a full Ethereum JSON-RPC node. None of that matches the crates. The sections above are the current behavior.

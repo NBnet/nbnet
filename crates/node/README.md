@@ -12,8 +12,11 @@ Production EVM node binary and cluster management for the nbnet chain.
 ## Usage
 
 ```bash
-# Run a node
-nb --home /path/to/node/home [--rpc-addr 127.0.0.1:8545]
+# Initialize keys, Hotmint config, and config/evm-genesis.json
+nb init --home /path/to/node/home
+
+# Run a node. --home is global and defaults to ~/.nbnet
+nb node --home /path/to/node/home --rpc-addr 127.0.0.1:8545
 
 # Run the benchmark
 cargo run --release -p nbnet-node --bin bench-nbnet
