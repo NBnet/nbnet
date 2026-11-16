@@ -10,13 +10,15 @@
 
 ## Won't Fix
 
+> Rechecked after the dependency bump (revm 43, alloy 2.5). Both entries still match the current tree.
+
 ### [MEDIUM] rpc: several Ethereum methods are stubs
-- **Where**: `crates/rpc/src/lib.rs`
+- **Where**: `crates/rpc/src/lib.rs` `eth_getBlockByHash`, `eth_syncing`, `eth_feeHistory`, `eth_estimateGas`
 - **What**: `eth_getBlockByHash` is always null, `eth_syncing` is always false, `eth_feeHistory` and `eth_estimateGas` do not report real history or gas used, and receipts live only in process memory.
 - **Reason**: This is the JSON-RPC subset the node implements. Filling those methods needs block-hash indexing and durable receipts, which are a separate feature. Documented in `docs/architecture.md`.
 
 ### [LOW] execution: BLOCKHASH records a zero parent hash
-- **Where**: `EvmExecutor::execute_block`
+- **Where**: `crates/execution/src/executor.rs` `execute_block` (`parent_hash = B256::ZERO`)
 - **What**: The parent hash passed to state is `B256::ZERO`, so contracts that call `BLOCKHASH` do not see the real parent.
 - **Reason**: Every node does the same thing, so `app_hash` still agrees. Supplying the real parent requires the consensus block hash at execution time. Not a fork between honest nodes.
 
