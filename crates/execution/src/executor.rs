@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use ruc::*;
@@ -28,8 +29,8 @@ pub struct EvmExecutor {
     state: Mutex<EvmState>,
     /// EVM transaction pool with (sender, nonce) semantics.
     pub txpool: Arc<EvmTxPool>,
-    /// Accumulated receipts per block (for RPC queries).
-    receipts: Mutex<Vec<Vec<EvmReceipt>>>,
+    /// Receipts keyed by block height. The vector index is not the height.
+    receipts: Mutex<BTreeMap<u64, Vec<EvmReceipt>>>,
     /// Current committed block height.
     block_height: std::sync::atomic::AtomicU64,
     /// Shared staking state for the Staking precompile.
@@ -56,7 +57,7 @@ impl EvmExecutor {
         Self {
             state: Mutex::new(state),
             txpool,
-            receipts: Mutex::new(Vec::new()),
+            receipts: Mutex::new(BTreeMap::new()),
             block_height: std::sync::atomic::AtomicU64::new(0),
             staking: Arc::new(Mutex::new(StakingState::new())),
         }
@@ -71,12 +72,12 @@ impl EvmExecutor {
             .clone()
     }
 
-    /// Get receipts for a block by index (0-based).
-    pub fn get_receipts(&self, block_index: usize) -> Option<Vec<EvmReceipt>> {
+    /// Get receipts for a committed block height.
+    pub fn get_receipts(&self, height: u64) -> Option<Vec<EvmReceipt>> {
         self.receipts
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .get(block_index)
+            .get(&height)
             .cloned()
     }
 
@@ -93,7 +94,7 @@ impl EvmExecutor {
     /// Find a receipt by transaction hash (linear scan over all blocks).
     pub fn get_receipt_by_tx_hash(&self, tx_hash: &B256) -> Option<EvmReceipt> {
         let receipts = self.receipts.lock().unwrap_or_else(|e| e.into_inner());
-        for block_receipts in receipts.iter().rev() {
+        for block_receipts in receipts.values().rev() {
             for r in block_receipts {
                 if &r.tx_hash == tx_hash {
                     return Some(r.clone());
@@ -391,7 +392,7 @@ impl Application for EvmExecutor {
         self.receipts
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .push(block_receipts);
+            .insert(ctx.height.as_u64(), block_receipts);
 
         Ok(EndBlockResponse {
             app_hash: BlockHash(state_root),

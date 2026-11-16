@@ -264,6 +264,16 @@ impl revm::database_interface::DatabaseRef for VsdbStateDb {
 }
 
 /// Build composite storage key: address(20) || slot(32) = 52 bytes.
+/// Trie key for a storage slot. The leading `0x01` keeps it distinct from
+/// the 20-byte account key.
+fn storage_trie_key(addr: &Address, slot: &U256) -> [u8; 53] {
+    let mut key = [0u8; 53];
+    key[0] = 0x01;
+    key[1..21].copy_from_slice(addr.as_slice());
+    key[21..].copy_from_slice(&slot.to_be_bytes::<32>());
+    key
+}
+
 fn storage_key(addr: &Address, slot: &U256) -> [u8; 52] {
     let mut key = [0u8; 52];
     key[..20].copy_from_slice(addr.as_slice());
@@ -311,6 +321,10 @@ impl EvmState {
             // Initialize genesis storage.
             for (slot, value) in &alloc.storage {
                 vsdb_db.insert_storage(addr, slot, value);
+                let _ = state_trie.insert(
+                    storage_trie_key(addr, slot).as_slice(),
+                    &value.to_be_bytes::<32>(),
+                );
             }
 
             // Update trie.
@@ -419,9 +433,15 @@ impl EvmState {
             let info = &cached_acc.info;
             self.db.db.insert_account(addr, info);
 
-            // Persist storage changes.
+            // Persist storage changes. The account leaf does not contain a
+            // storage root, so each slot is its own trie key. Otherwise two
+            // different storage maps share one app_hash.
             for (slot, value) in &cached_acc.storage {
                 self.db.db.insert_storage(addr, slot, value);
+                let _ = self.state_trie.insert(
+                    storage_trie_key(addr, slot).as_slice(),
+                    &value.to_be_bytes::<32>(),
+                );
             }
 
             // Update trie.

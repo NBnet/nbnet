@@ -140,7 +140,7 @@ fn dispatch(state: &EvmRpcState, req: &JsonRpcRequest) -> JsonRpcResponse {
         ),
         "web3_clientVersion" => JsonRpcResponse::ok(
             req.id.clone(),
-            serde_json::Value::String("nbnet/0.1.0".to_string()),
+            serde_json::Value::String("nbnet/0.1.1".to_string()),
         ),
 
         // --- Block ---
@@ -339,7 +339,7 @@ fn dispatch(state: &EvmRpcState, req: &JsonRpcRequest) -> JsonRpcResponse {
             let height = state.executor.block_height();
             let mut logs = Vec::new();
             for h in 0..=height {
-                if let Some(receipts) = state.executor.get_receipts(h as usize) {
+                if let Some(receipts) = state.executor.get_receipts(h) {
                     for r in &receipts {
                         for (log_idx, log) in r.logs.iter().enumerate() {
                             if let Some(ref af) = addr_filter
@@ -376,7 +376,7 @@ fn dispatch(state: &EvmRpcState, req: &JsonRpcRequest) -> JsonRpcResponse {
             let height = query_block_number(&state.executor);
             let tx_count = state
                 .executor
-                .get_receipts(height as usize)
+                .get_receipts(height)
                 .map(|r| r.len())
                 .unwrap_or(0);
             JsonRpcResponse::ok(

@@ -44,7 +44,7 @@ Implemented on `POST /`. Enough for basic wallets and Foundry against this chain
 
 | Method | Behavior |
 |--------|----------|
-| `eth_chainId`, `net_version`, `web3_clientVersion` | Chain id from genesis. The client version string is the hardcoded `nbnet/0.1.0` |
+| `eth_chainId`, `net_version`, `web3_clientVersion` | Chain id from genesis. The client version string is the hardcoded `nbnet/0.1.1` |
 | `eth_blockNumber` | Committed height |
 | `eth_getBalance`, `eth_getTransactionCount`, `eth_getCode`, `eth_getStorageAt` | Current executor state |
 | `eth_gasPrice` | Configured base fee |
