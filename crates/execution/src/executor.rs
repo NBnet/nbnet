@@ -310,7 +310,7 @@ impl Application for EvmExecutor {
 
             match evm.transact_commit(tx_env) {
                 Ok(result) => {
-                    let gas_used = result.gas_used();
+                    let gas_used = result.tx_gas_used();
                     cumulative_gas_used = cumulative_gas_used.saturating_add(gas_used);
 
                     let (success, logs) = match &result {

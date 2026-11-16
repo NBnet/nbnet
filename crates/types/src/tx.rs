@@ -161,15 +161,28 @@ pub fn effective_gas_tip(tx: &TxEnvelope, base_fee: u64) -> u64 {
 }
 
 #[cfg(test)]
+fn test_signing_key() -> k256::ecdsa::SigningKey {
+    use k256::elliptic_curve::Generate;
+    k256::ecdsa::SigningKey::generate_from_rng(&mut rand::rng())
+}
+
+#[cfg(test)]
+fn address_from_key(key: &k256::ecdsa::SigningKey) -> Address {
+    let point = key.verifying_key().to_sec1_point(false);
+    let hash = alloy_primitives::keccak256(&point.as_bytes()[1..]);
+    Address::from_slice(&hash[12..])
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use alloy_consensus::{SignableTransaction, TxLegacy};
-    use alloy_eips::Encodable2718;
+    use alloy_eips::eip2718::Encodable2718;
     use alloy_primitives::{Bytes, Signature, TxKind};
 
     fn make_signed_legacy_tx() -> (Vec<u8>, Address) {
-        let signing_key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
-        let address = alloy_primitives::Address::from_private_key(&signing_key);
+        let signing_key = test_signing_key();
+        let address = address_from_key(&signing_key);
 
         let tx = TxLegacy {
             chain_id: Some(1337),
@@ -182,10 +195,9 @@ mod tests {
         };
 
         let sig_hash = tx.signature_hash();
-        let (sig, recid) = signing_key
-            .sign_prehash_recoverable(sig_hash.as_slice())
-            .expect("sign");
-        let signature = Signature::from_signature_and_parity(sig, recid.is_y_odd());
+        let (sig, recid) = signing_key.sign_prehash_recoverable(sig_hash.as_slice());
+        let signature =
+            Signature::from_bytes_and_parity(sig.to_bytes().as_slice(), recid.is_y_odd());
 
         let signed = tx.into_signed(signature);
         let envelope = TxEnvelope::Legacy(signed);
@@ -274,8 +286,8 @@ mod tests {
     fn test_decode_eip1559_tx() {
         use alloy_consensus::TxEip1559;
 
-        let signing_key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
-        let expected = alloy_primitives::Address::from_private_key(&signing_key);
+        let signing_key = test_signing_key();
+        let expected = address_from_key(&signing_key);
 
         let tx = TxEip1559 {
             chain_id: 1337,
@@ -290,10 +302,9 @@ mod tests {
         };
 
         let sig_hash = tx.signature_hash();
-        let (sig, recid) = signing_key
-            .sign_prehash_recoverable(sig_hash.as_slice())
-            .expect("sign");
-        let signature = Signature::from_signature_and_parity(sig, recid.is_y_odd());
+        let (sig, recid) = signing_key.sign_prehash_recoverable(sig_hash.as_slice());
+        let signature =
+            Signature::from_bytes_and_parity(sig.to_bytes().as_slice(), recid.is_y_odd());
 
         let signed = tx.into_signed(signature);
         let envelope = TxEnvelope::Eip1559(signed);

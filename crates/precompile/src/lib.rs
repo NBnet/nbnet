@@ -13,6 +13,7 @@ use revm::context_interface::{ContextTr, JournalTr};
 use revm::handler::EthPrecompiles;
 use revm::handler::PrecompileProvider;
 use revm::interpreter::{CallInput, CallInputs, Gas, InstructionResult, InterpreterResult};
+use revm::primitives::AddressSet;
 use revm::primitives::hardfork::SpecId;
 
 /// Address of the Balances precompile.
@@ -93,14 +94,21 @@ pub type SharedStakingState = Arc<Mutex<StakingState>>;
 pub struct HotmintPrecompiles {
     eth: EthPrecompiles,
     staking: SharedStakingState,
+    warm: AddressSet,
+}
+
+fn warm_set(eth: &EthPrecompiles) -> AddressSet {
+    let mut warm = eth.warm_addresses().clone();
+    warm.insert(BALANCES_ADDR);
+    warm.insert(STAKING_ADDR);
+    warm
 }
 
 impl HotmintPrecompiles {
     pub fn new(spec: SpecId, staking: SharedStakingState) -> Self {
-        Self {
-            eth: EthPrecompiles::new(spec),
-            staking,
-        }
+        let eth = EthPrecompiles::new(spec);
+        let warm = warm_set(&eth);
+        Self { eth, staking, warm }
     }
 }
 
@@ -108,7 +116,11 @@ impl<CTX: ContextTr> PrecompileProvider<CTX> for HotmintPrecompiles {
     type Output = InterpreterResult;
 
     fn set_spec(&mut self, spec: <CTX::Cfg as Cfg>::Spec) -> bool {
-        <EthPrecompiles as PrecompileProvider<CTX>>::set_spec(&mut self.eth, spec)
+        let changed = <EthPrecompiles as PrecompileProvider<CTX>>::set_spec(&mut self.eth, spec);
+        if changed {
+            self.warm = warm_set(&self.eth);
+        }
+        changed
     }
 
     fn run(
@@ -129,10 +141,8 @@ impl<CTX: ContextTr> PrecompileProvider<CTX> for HotmintPrecompiles {
         self.eth.run(context, inputs)
     }
 
-    fn warm_addresses(&self) -> Box<impl Iterator<Item = Address>> {
-        let eth_addrs: Vec<Address> = self.eth.warm_addresses().collect();
-        let custom = vec![BALANCES_ADDR, STAKING_ADDR];
-        Box::new(eth_addrs.into_iter().chain(custom))
+    fn warm_addresses(&self) -> &AddressSet {
+        &self.warm
     }
 
     fn contains(&self, address: &Address) -> bool {
@@ -186,7 +196,7 @@ impl HotmintPrecompiles {
                     result.result = InstructionResult::PrecompileError;
                     return result;
                 }
-                if !result.gas.record_cost(PRECOMPILE_BASE_GAS) {
+                if !result.gas.record_regular_cost(PRECOMPILE_BASE_GAS) {
                     result.result = InstructionResult::PrecompileOOG;
                     return result;
                 }
@@ -203,7 +213,7 @@ impl HotmintPrecompiles {
                     result.result = InstructionResult::PrecompileError;
                     return result;
                 }
-                if !result.gas.record_cost(PRECOMPILE_WRITE_GAS) {
+                if !result.gas.record_regular_cost(PRECOMPILE_WRITE_GAS) {
                     result.result = InstructionResult::PrecompileOOG;
                     return result;
                 }
@@ -263,7 +273,7 @@ impl HotmintPrecompiles {
                     result.result = InstructionResult::PrecompileError;
                     return result;
                 }
-                if !result.gas.record_cost(PRECOMPILE_WRITE_GAS) {
+                if !result.gas.record_regular_cost(PRECOMPILE_WRITE_GAS) {
                     result.result = InstructionResult::PrecompileOOG;
                     return result;
                 }
@@ -298,7 +308,7 @@ impl HotmintPrecompiles {
                     result.result = InstructionResult::PrecompileError;
                     return result;
                 }
-                if !result.gas.record_cost(PRECOMPILE_WRITE_GAS) {
+                if !result.gas.record_regular_cost(PRECOMPILE_WRITE_GAS) {
                     result.result = InstructionResult::PrecompileOOG;
                     return result;
                 }
@@ -337,7 +347,7 @@ impl HotmintPrecompiles {
                     result.result = InstructionResult::PrecompileError;
                     return result;
                 }
-                if !result.gas.record_cost(PRECOMPILE_BASE_GAS) {
+                if !result.gas.record_regular_cost(PRECOMPILE_BASE_GAS) {
                     result.result = InstructionResult::PrecompileOOG;
                     return result;
                 }
@@ -356,7 +366,7 @@ impl HotmintPrecompiles {
                     result.result = InstructionResult::PrecompileError;
                     return result;
                 }
-                if !result.gas.record_cost(PRECOMPILE_BASE_GAS) {
+                if !result.gas.record_regular_cost(PRECOMPILE_BASE_GAS) {
                     result.result = InstructionResult::PrecompileOOG;
                     return result;
                 }

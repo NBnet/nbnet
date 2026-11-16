@@ -347,11 +347,17 @@ impl EvmTxPool {
 }
 
 #[cfg(test)]
+fn test_signing_key() -> k256::ecdsa::SigningKey {
+    use k256::elliptic_curve::Generate;
+    k256::ecdsa::SigningKey::generate_from_rng(&mut rand::rng())
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use alloy_consensus::TxEnvelope;
     use alloy_consensus::{SignableTransaction, TxEip1559};
-    use alloy_eips::Encodable2718;
+    use alloy_eips::eip2718::Encodable2718;
     use alloy_primitives::{Bytes, Signature, TxKind, U256};
 
     fn make_eip1559_tx(key: &k256::ecdsa::SigningKey, nonce: u64, tip: u128) -> Vec<u8> {
@@ -368,10 +374,9 @@ mod tests {
         };
 
         let sig_hash = tx.signature_hash();
-        let (sig, recid) = key
-            .sign_prehash_recoverable(sig_hash.as_slice())
-            .expect("sign");
-        let signature = Signature::from_signature_and_parity(sig, recid.is_y_odd());
+        let (sig, recid) = key.sign_prehash_recoverable(sig_hash.as_slice());
+        let signature =
+            Signature::from_bytes_and_parity(sig.to_bytes().as_slice(), recid.is_y_odd());
         let signed = tx.into_signed(signature);
         let envelope = TxEnvelope::Eip1559(signed);
         let mut buf = Vec::new();
@@ -384,7 +389,7 @@ mod tests {
         let pool = EvmTxPool::new(EvmTxPoolConfig::default());
         pool.set_nonce_fn(Box::new(|_| 0));
 
-        let key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        let key = test_signing_key();
         let raw = make_eip1559_tx(&key, 0, 1_000_000_000);
 
         let hash = pool.submit_tx(&raw).expect("submit should succeed");
@@ -398,7 +403,7 @@ mod tests {
         let pool = EvmTxPool::new(EvmTxPoolConfig::default());
         pool.set_nonce_fn(Box::new(|_| 0));
 
-        let key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        let key = test_signing_key();
 
         // Submit nonce 2 (gap: 0 and 1 missing).
         let raw = make_eip1559_tx(&key, 2, 1_000_000_000);
@@ -424,7 +429,7 @@ mod tests {
         let pool = EvmTxPool::new(EvmTxPoolConfig::default());
         pool.set_nonce_fn(Box::new(|_| 0));
 
-        let key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        let key = test_signing_key();
 
         let raw1 = make_eip1559_tx(&key, 0, 1_000_000_000);
         pool.submit_tx(&raw1).expect("submit 1");
@@ -447,7 +452,7 @@ mod tests {
         let pool = EvmTxPool::new(EvmTxPoolConfig::default());
         pool.set_nonce_fn(Box::new(|_| 5));
 
-        let key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        let key = test_signing_key();
         let raw = make_eip1559_tx(&key, 3, 1_000_000_000);
         let err = pool.submit_tx(&raw).expect_err("should reject low nonce");
         assert!(err.contains("nonce too low"));
@@ -458,7 +463,7 @@ mod tests {
         let pool = EvmTxPool::new(EvmTxPoolConfig::default());
         pool.set_nonce_fn(Box::new(|_| 0));
 
-        let key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        let key = test_signing_key();
         let raw = make_eip1559_tx(&key, 0, 1_000_000_000);
         pool.submit_tx(&raw).expect("submit");
 
@@ -472,7 +477,7 @@ mod tests {
         let pool = EvmTxPool::new(EvmTxPoolConfig::default());
         pool.set_nonce_fn(Box::new(|_| 0));
 
-        let key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        let key = test_signing_key();
         let raw0 = make_eip1559_tx(&key, 0, 1_000_000_000);
         let raw1 = make_eip1559_tx(&key, 1, 1_000_000_000);
         pool.submit_tx(&raw0).expect("submit 0");
@@ -489,7 +494,7 @@ mod tests {
         let pool = EvmTxPool::new(EvmTxPoolConfig::default());
         pool.set_nonce_fn(Box::new(|_| 0));
 
-        let key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        let key = test_signing_key();
         let raw = make_eip1559_tx(&key, 0, 1_000_000_000);
         pool.submit_tx(&raw).expect("submit 1");
         let err = pool.submit_tx(&raw).expect_err("should reject duplicate");
