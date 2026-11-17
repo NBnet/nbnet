@@ -6,7 +6,7 @@ Manages account balances, nonces, contract code, and storage slots. Provides a `
 
 ## Features
 
-- **Persistent state** — all account data stored in vsdb (pure-Rust LSM-Tree)
+- **Process-lifetime state** — account data is written to vsdb maps created by `MapxOrdRawKey::new()`. Startup does not reopen those maps; `from_genesis` starts from `evm-genesis.json`
 - **revm integration** — `CacheDB` adapter bridges vsdb to revm's `Database` trait
 - **State root** — deterministic MPT root computation after each block
 - **Genesis initialization** — `EvmState::from_genesis()` populates initial accounts from `EvmGenesis`

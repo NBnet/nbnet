@@ -6,7 +6,7 @@ Ethereum transaction types, genesis configuration, and chain config for the nbne
 
 | Module | Description |
 |:-------|:------------|
-| `tx` | EIP-1559/Legacy transaction decoding, ECDSA recovery, validation (nonce, balance, gas, chain_id) |
+| `tx` | EIP-2718 `TxEnvelope` decode, ECDSA recovery, validation (nonce, balance, gas, chain id). A fee under the base fee is not rejected on its own |
 | `genesis` | `EvmGenesis` — chain_id, alloc (address -> balance/nonce/code/storage), gas_limit, base_fee |
 | `receipt` | `EvmReceipt` — execution status, gas_used, logs per transaction |
 | `config` | `EvmChainConfig` — runtime chain parameters |

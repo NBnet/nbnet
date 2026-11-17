@@ -17,7 +17,7 @@ Implements the `Application` trait from `hotmint-consensus`, bridging the Hotmin
 | Method | Behavior |
 |:-------|:---------|
 | `validate_tx` | Decode + recover sender, check chain_id/nonce/balance/gas, return priority (effective tip) |
-| `create_payload` | Collect pending txs from `EvmTxPool` (up to 4MB, block gas limit) |
+| `create_payload` | At most one pending tx per sender (lowest nonce), then the 4 MiB and block-gas caps. Included txs leave the pool immediately |
 | `execute_block` | Run txs whose nonce matches the account; skip the rest; stop before a tx that does not fit the block gas limit; flush the cache; return the trie root |
 | `on_commit` | Update block height, call `txpool.on_commit()` for nonce-based cleanup |
 | `query` | Serve eth_getBalance, eth_getTransactionCount, eth_getCode, eth_getStorageAt |

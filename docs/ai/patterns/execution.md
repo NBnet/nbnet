@@ -55,7 +55,7 @@ Staking `HashMap` iteration is folded into `app_hash`.
 `transact_commit` runs, then the code notices the block is over the limit.
 
 ## Review Checklist
-- [ ] Chain id, signature, balance, and base fee still rejected in `validate_tx`
+- [ ] `validate_tx` still rejects a bad chain id, a low nonce, intrinsic gas, a gas limit above the block, and an upfront cost the balance cannot cover. A `max_fee` below the base fee is not its own error
 - [ ] Coinbase derivation did not start depending on map iteration
 - [ ] `BLOCKHASH` placeholder (`B256::ZERO`) was not mixed into the trie leaf
 - [ ] Receipt `status` follows Success vs Revert/Halt

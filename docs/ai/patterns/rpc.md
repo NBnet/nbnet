@@ -27,14 +27,17 @@ call `transact_commit`. A receipt lookup scans the executor's receipt
 list.
 
 ### INV-RPC2: Gossip and RPC Share Validation
-**Check**: `main.rs` does not push raw gossip bytes into the pool.
-Wrong chain id and a nonce that is too low are rejected the same way as
-a local submit.
+**Check**: Gossip in `main.rs` calls `Application::validate_tx` before
+`EvmMempoolAdapter::add_tx`. `eth_sendRawTransaction` calls
+`EvmTxPool::submit_tx`, which decodes, recovers the sender, and rejects
+a nonce below the account. It does not apply the chain-id, balance, or
+gas checks from `validate_tx`.
 
 ### INV-RPC3: App Hash Handoff
 **Check**: The hash stored for the engine is the `app_hash` from
 `execute_block`, not a separately recomputed digest of a `HashMap`.
-Restart loads world state from vsdb before the engine runs.
+Startup builds the executor with `from_genesis`. It does not reopen a
+previous trie.
 
 ### INV-RPC4: Dry-Run Does Not Commit
 **Check**: `eth_call` holds the state lock only for the read-only

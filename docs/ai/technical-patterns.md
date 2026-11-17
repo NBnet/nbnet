@@ -71,8 +71,7 @@ old transaction stays beside the new one.
 **Where**: `EvmTxPool` replace logic.
 **Impact**: The payer's replacement is ignored, or both are packed and
 the second fails the nonce check after the first succeeded.
-**Check**: Replacement requires a strictly higher tip. One slot per
-`(sender, nonce)`.
+**Check**: Replacement requires `new_tip >= existing * (100 + replacement_bump_pct) / 100`. The default bump is 10. One slot per `(sender, nonce)`.
 
 ---
 
@@ -153,8 +152,10 @@ Transaction lookup uses the receipt the executor stored.
 **Where**: `crates/node/src/main.rs`.
 **Impact**: A transaction the block executor would skip occupies payload
 space, or a wrong-chain-id transaction is packed.
-**Check**: Both the RPC submit path and the gossip path decode and
-validate before the pool accepts the bytes.
+**Check**: Gossip calls `validate_tx` before the pool. RPC submit goes
+through `EvmTxPool::submit_tx` only (decode, sender recovery, nonce
+floor, replacement bump). Do not describe those two paths as the same
+check.
 
 ---
 

@@ -45,11 +45,13 @@ does not promote the successor.
 
 **Pattern**: Reporting that receipts or `StakingState` disappear on process
 restart.
-**Rule**: Receipts live in a `Mutex<Vec<...>>` and staking delegations live
-in a `HashMap` on `SharedStakingState`. They are not the world-state trie.
-Report a restart loss only if a change starts treating that data as the
-source of `app_hash` or of a balance the trie does not store. Report a
-`HashMap` if its iteration order is hashed or persisted as consensus state.
+**Rule**: Receipts live in a `Mutex<BTreeMap<u64, Vec<EvmReceipt>>>` keyed
+by height. Staking delegations live in a `HashMap` on `SharedStakingState`.
+Neither is the trie. Startup also rebuilds account maps and the trie from
+genesis, so "state did not reload" matches the current node. Report a
+restart loss when a change starts treating receipts or the staking map as
+the source of `app_hash`, or when it claims the previous trie is restored.
+Report a `HashMap` if its iteration order is hashed.
 
 ## FP-7: Zero Parent Hash Is the Current BLOCKHASH Placeholder
 

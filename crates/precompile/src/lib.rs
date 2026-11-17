@@ -1,7 +1,7 @@
 //! Custom EVM precompiles bridging to native Hotmint modules.
 //!
 //! - 0x0800: Balances (native token balance query + transfer)
-//! - 0x0801: Staking (delegate / unbond / claim / query)
+//! - 0x0801: Staking (delegate / unbond / getStake / totalStake)
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

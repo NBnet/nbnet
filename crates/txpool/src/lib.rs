@@ -179,8 +179,8 @@ impl EvmTxPool {
 
     /// Collect transactions for a block proposal.
     ///
-    /// Returns raw tx bytes in priority order (highest effective tip first),
-    /// ensuring nonce continuity per sender.
+    /// Returns raw tx bytes in priority order (highest effective tip first).
+    /// Each sender contributes at most its lowest pending nonce.
     /// Returns length-prefixed format compatible with `decode_payload`.
     pub fn collect_payload(&self, max_bytes: usize, max_gas: u64) -> Vec<u8> {
         let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());

@@ -8,7 +8,7 @@ It is not a full Ethereum client, and it does not embed Substrate pallets or `ho
 
 | Crate | Role |
 |-------|------|
-| `nbnet-types` | Chain config, genesis, EIP-1559/legacy decode and sender recovery, receipts |
+| `nbnet-types` | Chain config, genesis, EIP-2718 `TxEnvelope` decode and sender recovery, receipts |
 | `nbnet-state` | `EvmState`: revm `CacheDB` over vsdb `MapxOrdRawKey`, plus an MPT (`MptCalc`) whose root is `app_hash` |
 | `nbnet-txpool` | Pending vs queued pool keyed by `(sender, nonce)`, with RBF and per-sender caps |
 | `nbnet-execution` | `EvmExecutor` / `SharedExecutor` implement Hotmint `Application` |
@@ -19,13 +19,15 @@ It is not a full Ethereum client, and it does not embed Substrate pallets or `ho
 ## Block path
 
 1. `validate_tx` decodes the raw bytes, recovers the sender, and rejects a wrong chain id, a nonce below the account, insufficient balance, or a gas limit the block cannot hold. The priority is the effective tip.
-2. The pool keeps nonces that are contiguous from the account nonce in `pending`. A gap goes to `queued` until the predecessor arrives. The same `(sender, nonce)` is replaced only by a higher tip.
-3. `create_payload` packs pending transactions up to 4 MiB and the block gas limit.
+2. The pool keeps nonces that are contiguous from the account nonce in `pending`. A gap goes to `queued` until the predecessor arrives. The same `(sender, nonce)` is replaced only when the new effective tip is at least 10% higher (`replacement_bump_pct`, default 10).
+3. `create_payload` takes at most one pending transaction per sender (that sender's lowest pending nonce), then stops at 4 MiB or the block gas limit. Transactions copied into the payload are removed from the pool at proposal time, not at commit.
 4. `execute_block` runs those transactions in order through revm (`SpecId::CANCUN`) and `transact_commit`. A transaction that does not decode, or whose nonce is not the account nonce at that step, is skipped and writes nothing. A transaction that would exceed the remaining block gas is not started. A revert or halt does not keep that call's storage writes.
 5. After the block, `flush_cache_to_vsdb` copies the cache into vsdb and the trie, then `state_root` becomes `EndBlockResponse.app_hash`.
 6. `on_commit` stores the height and drops pool entries below the new account nonce.
 
-Genesis allocation is a `BTreeMap`. Account leaves are big-endian `nonce(8) || balance(32) || code_hash(32)`. A `HashMap` walk must not be hashed into `app_hash`.
+Genesis allocation is a `BTreeMap`. Account leaves are big-endian `nonce(8) || balance(32) || code_hash(32)`. Each storage slot in the trie is `0x01 || address(20) || slot(32)`. The vsdb storage map uses `address || slot` and is not the trie key. A `HashMap` walk must not be hashed into `app_hash`.
+
+`nb node` always builds that state with `EvmState::from_genesis`. The new `MapxOrdRawKey` maps and the in-memory `MptCalc` are not reopened from a saved id, and `Application::info` stays at height 0, so committed blocks are not replayed. A restart starts again from `config/evm-genesis.json`: balances, the trie, receipts, block hashes, and the staking map do not come back.
 
 `BLOCKHASH` currently records `B256::ZERO` for the parent. That placeholder is not part of the account leaf.
 

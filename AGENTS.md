@@ -42,8 +42,9 @@ crates/rpc/          # eth_* / net_* / web3_* over axum
 crates/node/         # `nb` binary, cluster helpers, e2e
 ```
 
-About 4.4K lines of Rust, including tests. `docs/architecture.md` is the
-design history; when it disagrees with the crates, the code wins.
+About 4.4K lines of Rust, including tests. `docs/architecture.md` describes
+the current crates. When a behavior change lands, update that file in the
+same change.
 
 ## Build & test
 

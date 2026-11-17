@@ -9,7 +9,7 @@ Manages pending and queued transactions with (sender, nonce) ordering, EIP-1559 
 - **Sender/nonce ordering** — transactions are grouped by sender, ordered by nonce for correct execution
 - **Pending vs queued** — nonce-continuous txs are pending (ready for inclusion); gapped txs are queued
 - **EIP-1559 tip priority** — transactions sorted by effective gas tip (max_fee - base_fee, capped at max_priority_fee)
-- **Replacement-by-fee** — same (sender, nonce) with higher tip replaces existing tx
+- **Replacement-by-fee** — same `(sender, nonce)` replaces the existing tx only when the new tip is at least `replacement_bump_pct` higher (default 10%)
 - **Nonce promotion** — when a gap-filling tx arrives, queued txs automatically promote to pending
 - **Per-sender limits** — configurable max pending + queued per sender
 

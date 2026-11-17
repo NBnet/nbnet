@@ -7,8 +7,9 @@
 
 ## Architecture
 - `VsdbStateDb` stores accounts, code, storage, and block hashes in
-  `MapxOrdRawKey`. Keys are raw address bytes, code hash, or
-  address || slot.
+  `MapxOrdRawKey` maps created by `new()`. Account keys are raw address
+  bytes. The storage map key is `address || slot`. The trie key for a
+  slot is `0x01 || address || slot`. Startup does not reopen these maps.
 - `EvmState` wraps a revm `CacheDB` plus an `MptCalc` state trie.
 - `from_genesis` inserts each alloc into vsdb and the trie. Alloc is a
   `BTreeMap`.
@@ -23,9 +24,9 @@
 
 ### INV-ST2: Cache, Vsdb, and Trie Move Together
 **Check**: `flush_cache_to_vsdb` writes the account, each dirty storage
-slot, and the trie leaf. A new setter (`set_balance`, `set_nonce`,
-`insert_storage`) updates the copy execution will read and the copy a
-restart will read.
+slot, and the trie leaf in this process. A new setter (`set_balance`,
+`set_nonce`, `insert_storage`) updates the copy execution will read.
+`from_genesis` does not load a previous flush.
 
 ### INV-ST3: Getters See the Cache First
 **Check**: `get_balance`, `get_nonce`, `get_code`, and `get_storage` read

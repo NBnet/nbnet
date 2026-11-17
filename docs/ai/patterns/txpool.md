@@ -10,9 +10,11 @@
   account nonce. `queued` holds the rest.
 - The account nonce comes from `nonce_fn`, installed by
   `EvmExecutor::setup_nonce_fn` and passed again to `on_commit`.
-- Replacement is per `(sender, nonce)` and requires a higher tip.
-- `collect_payload` packs pending transactions under a byte cap and a
-  gas cap.
+- Replacement is per `(sender, nonce)` and requires a tip at least
+  `replacement_bump_pct` above the current one (default 10).
+- `collect_payload` takes the lowest pending nonce of each sender, then
+  applies the byte cap and the gas cap. Included transactions are removed
+  before the function returns.
 
 ## Critical Invariants
 
@@ -34,8 +36,9 @@ transaction that does not fit is not included and is not dropped from the
 pool.
 
 ### INV-TP4: One Transaction Per Slot
-**Check**: A worse tip does not replace. A better tip removes the previous
-bytes so they cannot be packed too.
+**Check**: A tip below `existing * (100 + bump) / 100` does not replace.
+A tip that clears that bar removes the previous bytes. The default bump
+is 10.
 
 ## Common Bug Patterns
 

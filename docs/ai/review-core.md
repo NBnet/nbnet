@@ -47,7 +47,8 @@ For each HIGH or CRITICAL change:
 
 **Determinism.** `app_hash` is `EvmState::state_root()`, the trie root.
 Account leaves are `nonce(8) || balance(32) || code_hash(32)`. Genesis
-allocation is a `BTreeMap`. Storage keys are address || slot. A `HashMap`
+allocation is a `BTreeMap`. The vsdb storage-map key is `address || slot`.
+The trie key for a slot is `0x01 || address || slot`. A `HashMap`
 or `HashSet` must not be iterated into the trie or into any bytes that
 are hashed for consensus.
 
@@ -90,15 +91,16 @@ rule.
 - Empty block. First block (height 0). Single genesis account.
 - Nonce 0, nonce equal to account, nonce one ahead, nonce far ahead,
   nonce below account.
-- Same `(sender, nonce)` with a higher tip (RBF) and with a lower tip.
+- Same `(sender, nonce)` with a tip at least 10% higher (RBF) and with a smaller bump.
 - Value plus gas cost above balance. Wrong chain id. Bad signature.
 - Contract create (`to` is `None`) and call. Revert and halt.
 - Block gas exactly equal to the next transaction, and one over.
 - Two nodes applying the same genesis: `state_root` matches
   (`test_state_root_determinism`).
-- Restart: trie accounts survive; in-memory receipts and staking
-  delegations do not. A change that needs them after restart must persist
-  them in order.
+- Restart: `from_genesis` builds new maps and a new trie from
+  `evm-genesis.json`. Receipts (`BTreeMap` by height) and staking
+  delegations do not survive either. A change that claims they do must
+  actually reopen the previous state.
 
 ### 3.3 Failure Paths
 

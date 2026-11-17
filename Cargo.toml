@@ -14,7 +14,7 @@ members = [
 version = "0.1.1"
 edition = "2024"
 license = "GPL-3.0-only"
-repository = "https://github.com/rust-util-collections/nbnet"
+repository = "https://github.com/NBnet/nbnet"
 keywords = ["evm", "ethereum", "consensus", "hotstuff2", "bft"]
 
 [workspace.dependencies]

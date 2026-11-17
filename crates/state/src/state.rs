@@ -285,17 +285,17 @@ fn storage_key(addr: &Address, slot: &U256) -> [u8; 52] {
 // EvmState — high-level state with CacheDB + vsdb + state trie
 // ---------------------------------------------------------------------------
 
-/// Persistent EVM world state.
+/// EVM world state for this process.
 ///
-/// Uses `CacheDB<VsdbStateDb>` for execution (CacheDB provides in-memory
-/// caching during block execution, VsdbStateDb provides persistence).
-/// State root is computed from an MPT trie updated on every account change.
+/// Uses `CacheDB<VsdbStateDb>` for execution. The vsdb maps are created
+/// empty by `MapxOrdRawKey::new()` and are not reopened after a restart.
+/// The state root is an in-memory `MptCalc` updated as accounts change.
 pub struct EvmState {
     pub db: CacheDB<VsdbStateDb>,
     pub state_trie: MptCalc,
     pub config: EvmChainConfig,
-    /// Recent block hashes (for BLOCKHASH opcode) — kept in both CacheDB cache
-    /// and vsdb for persistence across restarts.
+    /// Recent block hashes for the BLOCKHASH opcode. This map is
+    /// process-local. `from_genesis` starts it empty.
     pub block_hashes: BTreeMap<u64, B256>,
 }
 
